@@ -8,7 +8,7 @@ class CreateRespuesta:
     
     def funcion(self):
         return f"{self.Sexo} {self.Edad} {self.Respuesta}\n"
-
+    
 def createCSV():
     with open("encuesta_habitos.csv", "w") as archivo:
         archivo.write("Sexo Edad Respuesta\n")
