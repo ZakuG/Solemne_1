@@ -15,12 +15,13 @@ def leer_archivo_csv(nombre_archivo):
                     datos['Respuesta'].append(valores[2])
                 else:
                     datos['Respuesta'].append(f'{valores[2]} {valores[3]}')
+        messagebox.showinfo("Éxito", "Archivo leído correctamente")
+        return datos
     except FileNotFoundError:
         messagebox.showerror("Error", f'No se encontró el archivo: {nombre_archivo}')
     except Exception as e:
         messagebox.showerror("Error", f'Error al leer el archivo: {e}')
-    
-    return datos
+        
 
 def promedio_edad(edad):
     return sum(edad)/len(edad)
@@ -55,44 +56,78 @@ def procesador_encuesta(datos_encuesta):
     resultado = f"Promedio = {promedio}\nMediana = {mediana}\nModa = {moda}\n\nFrecuencias de Respuestas:\n"
     for key, value in frecuencias.items():
         resultado += f"{key}: {value}\n"
-    
+    respuesta.append(resultado)
     messagebox.showinfo("Resultados de la Encuesta", resultado)
 
 def menu_interactivo():
     root = tk.Tk()
     root.withdraw()
+    global respuesta
+    global nombre
+    global datos_encuesta
+    respuesta = []
+    var = []
+    nombres = []
+    nombre = ""
+    datos_encuesta = []
     while True:
-        opcion = simpledialog.askstring("Menú", "Seleccione una opción:\n\n1) Leer archivo de datos\n2) Mostrar estadísticas generales\n3) Filtrar datos por sexo\n4) Filtrar datos por rango de edad\n5) Guardar resultados en un archivo\n6) Salir").upper()
-        
+        opcion = simpledialog.askstring("Menú", f"{f"Archivo: {nombre}\n" if nombre != "" else ""}Seleccione una opción:\n\n1) Leer archivo de datos\n2) Mostrar estadísticas generales\n3) Filtrar datos por sexo\n4) Filtrar datos por rango de edad\n5) Guardar resultados en un archivo\n6) Salir").upper()
         if opcion == "1":
-            global datos_encuesta
+            nombre = ""
             archivo = simpledialog.askstring("Entrada", "¿Cuál es el nombre del archivo?")
-            if archivo:
-                datos_encuesta = leer_archivo_csv(archivo)
-                messagebox.showinfo("Éxito", "Archivo leído correctamente")
+            datos_encuesta = leer_archivo_csv(archivo)
+            nombre = archivo if datos_encuesta else ""
         elif opcion == "2":
-            if datos_encuesta:
+            if datos_encuesta and archivo and nombre != "":
                 procesador_encuesta(datos_encuesta)
+                var.append("Estadisticas generales")
+                nombres.append(nombre)
             else:
                 messagebox.showerror("Error", "No hay datos cargados")
         elif opcion == "3":
-            sexo = simpledialog.askstring("Filtro", "Ingrese el sexo a filtrar (Femenino/Masculino):")
-            datos_filtrados = {key: [datos_encuesta[key][i] for i in range(len(datos_encuesta["Sexo"])) if datos_encuesta["Sexo"][i] == sexo] for key in datos_encuesta}
-            procesador_encuesta(datos_filtrados)
+            if nombre == "":
+                messagebox.showerror("Error", "No hay datos cargados")
+            else:
+                sexo = simpledialog.askstring("Filtro", "Ingrese el sexo a filtrar (Femenino/Masculino):")
+                if sexo == "Femenino" or sexo == "Masculino":
+                    datos_filtrados = {key: [datos_encuesta[key][i] for i in range(len(datos_encuesta["Sexo"])) if datos_encuesta["Sexo"][i] == sexo] for key in datos_encuesta}
+                    procesador_encuesta(datos_filtrados)
+                    var.append(f"Datos filtrados por {sexo}")
+                    nombres.append(nombre)
+                else:
+                    messagebox.showerror("Error", """Ingrese 'Maculino' o 'Femenino' porfavor""")
         elif opcion == "4":
-            edad_min = int(simpledialog.askstring("Filtro", "Ingrese la edad mínima:"))
-            edad_max = int(simpledialog.askstring("Filtro", "Ingrese la edad máxima:"))
-            datos_filtrados = {key: [datos_encuesta[key][i] for i in range(len(datos_encuesta["Edad"])) if edad_min <= int(datos_encuesta["Edad"][i]) <= edad_max] for key in datos_encuesta}
-            procesador_encuesta(datos_filtrados)
+            try:
+                a = True
+                if nombre == "":
+                    messagebox.showerror("Error", "No hay datos cargados")
+                else:
+                    while a:
+                        edad_min = int(simpledialog.askstring("Filtro", "Ingrese la edad mínima:"))
+                        max_real = int(max(datos_encuesta["Edad"]))
+                        min_real = int(min(datos_encuesta["Edad"]))
+                        if edad_min < min_real:
+                            messagebox.showerror("Error", f"Error, la edad minima en la encuesta es {min_real}, porfavor intente nuevamente.")
+                        edad_max = int(simpledialog.askstring("Filtro", "Ingrese la edad máxima:"))
+                        if edad_max > max_real:
+                            messagebox.showerror("Error", f"Error, la edad maxima en la encuesta es {max_real}, porfavor intente nuevamente.")
+                        else:
+                            a = False
+                    datos_filtrados = {key: [datos_encuesta[key][i] for i in range(len(datos_encuesta["Edad"])) if edad_min <= int(datos_encuesta["Edad"][i]) <= edad_max] for key in datos_encuesta}
+                    procesador_encuesta(datos_filtrados)
+                    var.append(f"Datos filtrados por rango de edad [{edad_min} - {edad_max}]")
+                    nombres.append(nombre)
+            except Exception as e:
+                messagebox.showerror("Error", f"Error, porfavor intente nuevamente: {e}")
         elif opcion == "5":
             with open("resultados.txt", "w") as archivo:
-                archivo.write("Resultados de la Encuesta\n\n")
-                archivo.write(f"Promedio de edad: {promedio_edad([int(e) for e in datos_encuesta['Edad']])}\n")
-                archivo.write(f"Mediana de edad: {mediana_edad([int(e) for e in datos_encuesta['Edad']])}\n")
-                archivo.write(f"Moda de edad: {moda_edad([int(e) for e in datos_encuesta['Edad']])}\n")
-                archivo.write("\nFrecuencia de respuestas:\n")
-                for key, value in contar_frecuencia(datos_encuesta["Respuesta"]).items():
-                    archivo.write(f"{key}: {value}\n")
+                i = 0
+                for elemento in respuesta:
+                    archivo.write(f"Resultados de la Encuesta: {nombres[i]}\n\n")
+                    archivo.write(f"Opcion: {var[i]}\n")
+                    archivo.write(f"{elemento}\n")
+                    i += 1
+                archivo.close
             messagebox.showinfo("Éxito", "Resultados guardados en 'resultados.txt'")
         elif opcion == "6":
             break
